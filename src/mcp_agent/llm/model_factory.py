@@ -13,6 +13,7 @@ from mcp_agent.llm.providers.augmented_llm_anthropic import AnthropicAugmentedLL
 from mcp_agent.llm.providers.augmented_llm_deepseek import DeepSeekAugmentedLLM
 from mcp_agent.llm.providers.augmented_llm_generic import GenericAugmentedLLM
 from mcp_agent.llm.providers.augmented_llm_google import GoogleAugmentedLLM
+from mcp_agent.llm.providers.augmented_llm_nim import NIMAugmentedLLM
 from mcp_agent.llm.providers.augmented_llm_openai import OpenAIAugmentedLLM
 from mcp_agent.llm.providers.augmented_llm_openrouter import OpenRouterAugmentedLLM
 from mcp_agent.mcp.interfaces import AugmentedLLMProtocol
@@ -63,6 +64,11 @@ class ModelFactory:
     # Mapping of model names to their default providers
     DEFAULT_PROVIDERS = {
         "passthrough": Provider.FAST_AGENT,
+        "nvdev/nvidia/llama-3.1-nemotron-ultra-253b-v1": Provider.NIM,
+        "meta/llama-3.1-405b-instruct": Provider.NIM,
+        "nvdev/meta/llama-3.1-70b-instruct": Provider.NIM,
+        "meta/llama-3.3-70b-instruct": Provider.NIM,
+        "nvdev/meta/llama-3.3-70b-instruct": Provider.NIM,
         "playback": Provider.FAST_AGENT,
         "gpt-4o": Provider.OPENAI,
         "gpt-4o-mini": Provider.OPENAI,
@@ -110,6 +116,7 @@ class ModelFactory:
         Provider.GENERIC: GenericAugmentedLLM,
         Provider.GOOGLE: GoogleAugmentedLLM,  # type: ignore
         Provider.OPENROUTER: OpenRouterAugmentedLLM,
+        Provider.NIM: NIMAugmentedLLM,
     }
 
     # Mapping of special model names to their specific LLM classes

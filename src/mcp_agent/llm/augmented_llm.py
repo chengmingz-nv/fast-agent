@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import json
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -70,6 +71,7 @@ class AugmentedLLM(ContextDependent, AugmentedLLMProtocol, Generic[MessageParamT
     PARAM_METADATA = "metadata"
     PARAM_USE_HISTORY = "use_history"
     PARAM_MAX_ITERATIONS = "max_iterations"
+    PARAM_RESPONSE_FORMAT = "response_format"
 
     # Base set of fields that should always be excluded
     BASE_EXCLUDE_FIELDS = {PARAM_METADATA}

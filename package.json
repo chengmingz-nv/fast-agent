@@ -1,0 +1,28 @@
+{
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.2",
+    "@modelcontextprotocol/server-sequential-thinking": "^0.6.2"
+  },
+  "name": "fast-agent",
+  "version": "1.0.0",
+  "description": "<p align=\"center\">\r <a href=\"https://pypi.org/project/fast-agent-mcp/\"><img src=\"https://img.shields.io/pypi/v/fast-agent-mcp?color=%2334D058&label=pypi\" /></a>\r <a href=\"#\"><img src=\"https://github.com/evalstate/fast-agent/actions/workflows/main-checks.yml/badge.svg\" /></a>\r <a href=\"https://github.com/evalstate/fast-agent/issues\"><img src=\"https://img.shields.io/github/issues-raw/evalstate/fast-agent\" /></a>\r <a href=\"https://discord.gg/xg5cJ7ndN6\"><img src=\"https://img.shields.io/discord/1358470293990936787\" alt=\"discord\" /></a>\r <img alt=\"Pepy Total Downloads\" src=\"https://img.shields.io/pepy/dt/fast-agent-mcp?label=pypi%20%7C%20downloads\"/>\r <a href=\"https://github.com/evalstate/fast-agent-mcp/blob/main/LICENSE\"><img src=\"https://img.shields.io/pypi/l/fast-agent-mcp\" /></a>\r </p>",
+  "main": "index.js",
+  "directories": {
+    "example": "examples",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chengmingz-nv/fast-agent.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/chengmingz-nv/fast-agent/issues"
+  },
+  "homepage": "https://github.com/chengmingz-nv/fast-agent#readme"
+}

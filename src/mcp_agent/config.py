@@ -101,6 +101,12 @@ class MCPSettings(BaseModel):
     model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)
 
 
+class NimSettings(BaseModel):
+    api_key: str | None = None
+    base_url: str | None = None
+    model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)
+
+
 class AnthropicSettings(BaseModel):
     """
     Settings for using Anthropic models in the fast-agent application.
@@ -267,6 +273,9 @@ class Settings(BaseSettings):
 
     anthropic: AnthropicSettings | None = None
     """Settings for using Anthropic models in the fast-agent application"""
+
+    nim: NimSettings | None = None
+    """Settings for using NIM models in the fast-agent application"""
 
     otel: OpenTelemetrySettings | None = OpenTelemetrySettings()
     """OpenTelemetry logging settings for the fast-agent application"""

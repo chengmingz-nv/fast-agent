@@ -14,4 +14,5 @@ class Provider(Enum):
     GOOGLE = "google"
     DEEPSEEK = "deepseek"
     GENERIC = "generic"
+    NIM = "nim"
     OPENROUTER = "openrouter"
