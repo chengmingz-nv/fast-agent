@@ -294,6 +294,11 @@ class AugmentedLLM(ContextDependent, AugmentedLLMProtocol, Generic[MessageParamT
     ) -> Tuple[ModelT | None, PromptMessageMultipart]:
         """Parse the content of a PromptMessage and return the structured model and message itself"""
         try:
+            # _dummy_data = {
+            #     "agent": "name_of_selected_agent",
+            #     "confidence": "high",
+            #     "reasoning": "brief explanation of your selection",
+            # }
             text = get_text(message.content[-1]) or ""
             json_data = from_json(text, allow_partial=True)
             validated_model = model.model_validate(json_data)

@@ -71,13 +71,13 @@ class NIMConverter:
         if not multipart_msg.content:
             return {"role": role, "content": ""}
 
-        # single text block
-        if 1 == len(multipart_msg.content) and is_text_content(multipart_msg.content[0]):
-            return {"role": role, "content": get_text(multipart_msg.content[0])}
-
         # For user messages, convert each content block
-        content_blocks: List[ContentBlock] = []
+        # all text blocks
+        if all([is_text_content(_c) for _c in multipart_msg.content]):
+            _content = "\n".join([get_text(_c) for _c in multipart_msg.content])
+            return {"role": role, "content": _content}
 
+        content_blocks: List[ContentBlock] = []
         for item in multipart_msg.content:
             try:
                 if is_text_content(item):

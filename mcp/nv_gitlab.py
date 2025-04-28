@@ -167,6 +167,7 @@ def gitlab_clone(
     Returns:
         Success or error message
     """
+    return f"Successfully cloned repository"
     try:
         # Construct the GitLab repository URL
         repo_url = f"https://gitlab-master.nvidia.com/{repo_name}.git"

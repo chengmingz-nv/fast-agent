@@ -28,7 +28,7 @@ from mcp_agent.llm.augmented_llm import (
     RequestParams,
 )
 from mcp_agent.llm.provider_types import Provider
-from mcp_agent.llm.providers.multipart_converter_nim import NIMConverter
+from mcp_agent.llm.providers.multipart_converter_nim import NIMConverter, NIMMessage
 from mcp_agent.llm.providers.multipart_converter_openai import OpenAIConverter, OpenAIMessage
 from mcp_agent.llm.providers.sampling_converter_nim import NIMSamplingConverter
 from mcp_agent.llm.providers.sampling_converter_openai import (
@@ -221,35 +221,6 @@ class NIMAugmentedLLM(AugmentedLLM[ChatCompletionMessageParam, ChatCompletionMes
 
             self._log_chat_progress(self.chat_turn(), model=self.default_request_params.model)
 
-            ## EXP Start
-            # _client = OpenAI(
-            #     base_url="https://integrate.api.nvidia.com/v1",
-            # )
-            # _user_prompt = [
-            #     "What is the capital of the moon?",
-            #     "What is the capital of France?",
-            #     "What is the difference between Python and Java?",
-            #     "1 + 1 = ?",
-            #     "Who is WuKong?",
-            # ]
-            # for i in range(len(_user_prompt)):
-            # print(f"?? Question: {_user_prompt[i]}")
-            # arguments["messages"][1] = {"role": "user", "content": _user_prompt[1]}
-            # completion = _client.chat.completions.create(
-            #     model=r"nvdev/meta/llama-3.1-70b-instruct",
-            #     messages=arguments["messages"],
-            #     temperature=0.7,
-            #     top_p=0.6,
-            #     max_tokens=1024 * 4,
-            #     stream=True,
-            # )
-            # print(f"keys={arguments.keys()}")
-            # completion = _client.chat.completions.create(**arguments)
-            # for chunk in completion:
-            #     if chunk.choices[0].delta.content is not None:
-            #         print(chunk.choices[0].delta.content, end="")
-
-            # EXP End
             executor_result = await self.executor.execute(
                 self._openai_client().chat.completions.create, **arguments
             )
@@ -257,7 +228,7 @@ class NIMAugmentedLLM(AugmentedLLM[ChatCompletionMessageParam, ChatCompletionMes
             response = executor_result[0]
 
             self.logger.debug(
-                "OpenAI completion response:",
+                "NIM OpenAI completion response:",
                 data=response,
             )
 
@@ -392,7 +363,7 @@ class NIMAugmentedLLM(AugmentedLLM[ChatCompletionMessageParam, ChatCompletionMes
             return last_message
 
         # For assistant messages: Return the last message (no completion needed)
-        message_param: OpenAIMessage = NIMConverter.convert_to_nim(last_message)
+        message_param: NIMMessage = NIMConverter.convert_to_nim(last_message)
         responses: List[
             TextContent | ImageContent | EmbeddedResource
         ] = await self._openai_completion(
@@ -408,6 +379,48 @@ class NIMAugmentedLLM(AugmentedLLM[ChatCompletionMessageParam, ChatCompletionMes
         self, tool_call_id: str | None, request: CallToolRequest, result: CallToolResult
     ):
         return result
+
+    def prepare_provider_arguments(
+        self,
+        base_args: dict,
+        request_params: RequestParams,
+        exclude_fields: set | None = None,
+    ) -> dict:
+        """
+        Prepare arguments for provider API calls by merging request parameters.
+
+        Args:
+            base_args: Base arguments dictionary with provider-specific required parameters
+            params: The RequestParams object containing all parameters
+            exclude_fields: Set of field names to exclude from params. If None, uses BASE_EXCLUDE_FIELDS.
+
+        Returns:
+            Complete arguments dictionary with all applicable parameters
+        """
+        # Start with base arguments
+        arguments = base_args.copy()
+
+        # Use provided exclude_fields or fall back to base exclusions
+        exclude_fields = exclude_fields or self.BASE_EXCLUDE_FIELDS.copy()
+
+        # Add all fields from params that aren't explicitly excluded
+        params_dict = request_params.model_dump(exclude=exclude_fields)
+        for key, value in params_dict.items():
+            if value is not None and key not in arguments:
+                arguments[key] = value
+
+        # Finally, add any metadata fields as a last layer of overrides
+        if request_params.metadata:
+            arguments.update(request_params.metadata)
+        if request_params.response_format:
+            for _idx in range(len(arguments["messages"])):
+                if arguments["messages"][_idx]["role"] == "system":
+                    arguments["messages"][_idx]["content"] = (
+                        arguments["messages"][_idx]["content"]
+                        + f"\n\nresponse format must be aligned with the following:\n{json.dumps(request_params.response_format)}"
+                    )
+            arguments["response_format"] = {"type": "json_object"}
+        return arguments
 
     def _prepare_api_request(
         self, messages, tools, request_params: RequestParams
@@ -441,18 +454,5 @@ class NIMAugmentedLLM(AugmentedLLM[ChatCompletionMessageParam, ChatCompletionMes
         arguments: Dict[str, str] = self.prepare_provider_arguments(
             base_args, request_params, self.NIM_EXCLUDE_FIELDS.union(self.BASE_EXCLUDE_FIELDS)
         )
-        # Add Response Format
-        if hasattr(request_params, "response_format") and "response_format" not in arguments:
-            for _idx in range(len(arguments["messages"])):
-                if arguments["messages"][_idx]["role"] == "system":
-                    arguments["messages"][_idx]["content"] = (
-                        arguments["messages"][_idx]["content"]
-                        + f"\n\nresponse format must be aligned with the following:\n{json.dumps(request_params.response_format)}"
-                    )
 
-        for _message in arguments["messages"]:
-            if isinstance(_message["content"], (list, dict, tuple)) and not isinstance(
-                _message["content"], str
-            ):
-                _message["content"] = f"```json\n{json.dumps(_message['content'])}\n```\n\n"
         return arguments
