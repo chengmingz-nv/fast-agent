@@ -128,7 +128,9 @@ class NIMAugmentedLLM(AugmentedLLM[ChatCompletionMessageParam, ChatCompletionMes
                 role=role, content=content, tool_calls=tool_calls if tool_calls else None
             )
         else:
-            if not response.choices or len(response.choices) == 0:
+            if not response or isinstance(response, str):
+                return ChatCompletionMessage(role="assistant", content="")
+            elif not response.choices or len(response.choices) == 0:
                 # No response from the model, we're done
                 return ChatCompletionMessage(role="assistant", content="")
             return response.choices[0].message

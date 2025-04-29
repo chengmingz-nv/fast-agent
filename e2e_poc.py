@@ -43,6 +43,12 @@ _request_params = RequestParams(temperature=0.7, top_p=0.6, stream=False, use_hi
     instruction="""You are a QA engineer, read the log and report the results.""",
     servers=["filesystem"],
 )
+@fast.agent(
+    name="chatting_agent",
+    request_params=_request_params,
+    instruction="""You are a QA engineer, read the log and report the results.""",
+    servers=["filesystem"],
+)
 @fast.router(
     name="route",
     request_params=_request_params,
@@ -52,6 +58,8 @@ async def main() -> None:
     async with fast.run() as agent:
         for stage in TEST_STAGES:
             await agent.route(stage)
+        for i in range(10):
+            await agent.interactive()
 
 
 if __name__ == "__main__":
