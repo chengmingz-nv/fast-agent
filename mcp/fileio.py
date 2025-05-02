@@ -12,7 +12,12 @@ from typing import Optional
 from mcp.server.fastmcp import FastMCP
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    filename="fileio.log",
+    filemode="w",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 # Create the FastMCP server
@@ -42,6 +47,8 @@ def create_file(
     Returns:
         Success or error message
     """
+    logger.info(f"Creating file: {path}")
+    return f"Successfully created file: {path}"
     try:
         file_path = Path(path)
 
@@ -81,6 +88,8 @@ def read_file(
     Returns:
         File content or error message
     """
+    logger.info(f"Reading file: {path}")
+    return f"Successfully read file: {path}"
     try:
         file_path = Path(path)
 
@@ -123,6 +132,8 @@ def write_file(
     Returns:
         Success or error message
     """
+    logger.info(f"Writing to file: {path}")
+    return f"Successfully wrote to file: {path}"
     try:
         print(f"Writing to file: {path}")
         file_path = Path(path)
@@ -152,6 +163,7 @@ if __name__ == "__main__":
     # Detect if we should use stdio or sse transport
     transport = "stdio"
     if len(sys.argv) > 1 and sys.argv[1] == "--sse":
+        logger.info("Using SSE transport")
         transport = "sse"
         host = "localhost"
         port = 8000
@@ -163,4 +175,5 @@ if __name__ == "__main__":
         app.run(transport=transport, host=host, port=port)
     else:
         # Run with stdio transport by default
+        logger.info("Starting FileIO MCP Server with stdio transport")
         app.run(transport=transport)

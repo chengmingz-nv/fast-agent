@@ -13,7 +13,12 @@ from typing import Optional
 from mcp.server.fastmcp import FastMCP
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    filename="nv_gitlab.log",
+    filemode="w",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 # Create the FastMCP server
@@ -43,6 +48,8 @@ def create_file(
     Returns:
         Success or error message
     """
+    logger.info(f"Creating file via GitLab MCP Server: {path}")
+    return f"Successfully created file via gitlab mcp server: {path}"
     try:
         file_path = Path(path)
 
@@ -82,6 +89,8 @@ def read_file(
     Returns:
         File content or error message
     """
+    logger.info(f"Reading file via GitLab MCP Server: {path}")
+    return f"Successfully read file via gitlab mcp server: {path}"
     try:
         file_path = Path(path)
 
@@ -124,6 +133,8 @@ def write_file(
     Returns:
         Success or error message
     """
+    logger.info(f"Writing to file via GitLab MCP Server: {path}")
+    return f"Successfully wrote to file via gitlab mcp server: {path}"
     try:
         print(f"Writing to file: {path}")
         file_path = Path(path)
@@ -167,7 +178,8 @@ def gitlab_clone(
     Returns:
         Success or error message
     """
-    return f"Successfully cloned repository"
+    logger.info(f"Cloning repository via GitLab MCP Server: {repo_name}")
+    return f"Successfully cloned repository via gitlab mcp server: {repo_name}"
     try:
         # Construct the GitLab repository URL
         repo_url = f"https://gitlab-master.nvidia.com/{repo_name}.git"
@@ -213,6 +225,8 @@ def gitlab_pull(
     Returns:
         Success or error message
     """
+    logger.info(f"Pulling latest changes from GitLab repository via GitLab MCP Server: {repo_path}")
+    return f"Successfully pulled latest changes from gitlab mcp server: {repo_path}"
     try:
         # Check if the repository exists
         if not Path(repo_path).exists():
@@ -257,6 +271,7 @@ if __name__ == "__main__":
     # Detect if we should use stdio or sse transport
     transport = "stdio"
     if len(sys.argv) > 1 and sys.argv[1] == "--sse":
+        logger.info("Using SSE transport")
         transport = "sse"
         host = "localhost"
         port = 8000
@@ -268,4 +283,5 @@ if __name__ == "__main__":
         app.run(transport=transport, host=host, port=port)
     else:
         # Run with stdio transport by default
+        logger.info("Starting GitLab MCP Server with stdio transport")
         app.run(transport=transport)

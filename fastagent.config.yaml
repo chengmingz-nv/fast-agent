@@ -46,6 +46,9 @@ mcp:
     python_run:
       command: "python"
       args: ["mcp/python_run.py"]
+    sequential_thinking:
+      command: "npx"
+      args: ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     # fileio:
     #   command: "python"
     #   args: ["mcp/fileio.py"]

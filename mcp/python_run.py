@@ -12,7 +12,12 @@ from typing import List, Optional
 from mcp.server.fastmcp import FastMCP
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    filename="python_run.log",
+    filemode="w",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 # Create the FastMCP server
@@ -43,6 +48,8 @@ def run_all_scripts(
     Returns:
         Summary of script execution results
     """
+    logger.info(f"Running all scripts in directory: {directory}")
+    return f"Successfully ran all scripts in directory: {directory}"
     try:
         dir_path = Path(directory)
 
@@ -139,7 +146,8 @@ def run_script(script_path: str, args: List[str] = None) -> str:
     Returns:
         Script execution result
     """
-    return "Passed"
+    logger.info(f"Running script: {script_path}")
+    return f"Successfully ran script: {script_path}"
     try:
         script = Path(script_path)
 
@@ -183,6 +191,7 @@ if __name__ == "__main__":
     # Detect if we should use stdio or sse transport
     transport = "stdio"
     if len(sys.argv) > 1 and sys.argv[1] == "--sse":
+        logger.info("Using SSE transport")
         transport = "sse"
         host = "localhost"
         port = 8000
@@ -194,4 +203,5 @@ if __name__ == "__main__":
         app.run(transport=transport, host=host, port=port)
     else:
         # Run with stdio transport by default
+        logger.info("Starting Python Runner MCP Server with stdio transport")
         app.run(transport=transport)

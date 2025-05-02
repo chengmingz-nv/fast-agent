@@ -44,7 +44,7 @@ _request_params = RequestParams(temperature=0.7, top_p=0.6, stream=False, use_hi
     servers=["filesystem"],
 )
 @fast.agent(
-    name="chatting_agent",
+    name="triage_agent",
     request_params=_request_params,
     instruction="""You are a QA engineer, read the log and report the results.""",
     servers=["filesystem"],
