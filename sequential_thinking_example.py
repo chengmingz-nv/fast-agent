@@ -1,73 +1,102 @@
 import asyncio
 from mcp_agent.core.fastagent import FastAgent
 from mcp_agent.core.request_params import RequestParams
+from mcp_agent.core.agent_types import AgentConfig
+from mcp_agent.agents.sequential_thinking_agent import SequentialThinkingAgent
 
 # Create the application
 fast = FastAgent("sequential thinking demo")
 
+# Configure request parameters
 _request_params = RequestParams(temperature=0.7, top_p=0.6, stream=False, use_history=True)
 _servers = ["sequential_thinking"]
 
+# Define the basic instruction for the sequential thinking agent
+SEQUENTIAL_THINKING_INSTRUCTION = """You are an AI assistant that uses sequential thinking to solve problems step by step.
 
+When thinking through a problem:
+1. Break it down into manageable steps
+2. Consider different perspectives
+3. Use your reasoning process to build toward a solution
+4. Provide clear explanations of your thinking at each step
+5. Draw a conclusion once you've worked through the problem
+
+When using the sequential_thinking tool, follow the parameters provided in the message.
+"""
+
+
+# Define the agent function using FastAgent decorator
 @fast.agent(
-    instruction="""You are an AI assistant that uses sequential thinking to solve problems step by step.""",
+    name="default_agent",  # Explicitly name the agent for easier access
+    instruction=SEQUENTIAL_THINKING_INSTRUCTION,
     servers=_servers,
     request_params=_request_params,
 )
 async def main():
-    # Create a simple sequential thinking state tracker
-    state = {
-        "thought_number": 1,
-        "total_thoughts": 5,  # Initial estimate
-        "next_thought_needed": True,
-    }
+    """Set up the sequential thinking demo."""
 
+    # Create problem to solve
     problem = (
         "How might we implement a distributed system for real-time collaborative document editing?"
     )
 
-    async with fast.run() as agent:
-        print(f"Problem: {problem}\n")
+    async with fast.run() as agent_app:
+        # Get the default agent using the AgentApp's access methods
+        default_agent = agent_app["default_agent"]
 
-        # Send the initial prompt with the problem
-        response = await agent.send(
-            f"""I need to solve this problem using sequential thinking: {problem}
-            
-            Let me break this down step by step using the sequential_thinking tool.
-            I'll set thoughtNumber={state["thought_number"]}, totalThoughts={state["total_thoughts"]}, and nextThoughtNeeded={str(state["next_thought_needed"]).lower()}.
-            """
+        # Create a configuration for our specialized sequential thinking agent
+        config = AgentConfig(
+            name="sequential_thinker",
+            instruction=SEQUENTIAL_THINKING_INSTRUCTION,
+            servers=_servers,
+            use_history=True,
         )
 
-        print(f"Step {state['thought_number']}:\n{response}\n")
+        # Create our specialized sequential thinking agent using the same LLM
+        sequential_agent = SequentialThinkingAgent(config=config, max_thoughts=6)
 
-        # Continue the sequential thinking process until complete
-        while state["next_thought_needed"]:
-            # Update state for next thought
-            state["thought_number"] += 1
+        # Attach the same LLM to our agent
+        await sequential_agent.attach_llm(
+            llm_factory=default_agent._llm.__class__,
+            model=getattr(default_agent._llm, "request_params", {}).get("model"),
+            request_params=_request_params,
+        )
 
-            # For demonstration, we'll say we're done after 5 thoughts
-            if state["thought_number"] >= state["total_thoughts"]:
-                state["next_thought_needed"] = False
+        # Initialize the connections
+        await sequential_agent.initialize()
 
-            # Send the next prompt with updated state information
-            response = await agent.send(
-                f"""Continue the sequential thinking process.
-                
-                For this next thought, use these parameters:
-                - thoughtNumber: {state["thought_number"]}
-                - totalThoughts: {state["total_thoughts"]}
-                - nextThoughtNeeded: {str(state["next_thought_needed"]).lower()}
-                """
+        try:
+            print(f"\nProblem: {problem}\n")
+
+            # Send the initial prompt with the problem
+            response = await sequential_agent.send(
+                f"I need to solve this problem using sequential thinking: {problem}"
             )
+            print(f"Step {sequential_agent.state['thought_number']}:\n{response}\n")
 
-            print(f"Step {state['thought_number']}:\n{response}\n")
+            # Continue the sequential thinking process until complete
+            while sequential_agent.state["next_thought_needed"]:
+                # User prompt to continue
+                input("Press Enter to continue to the next thought...")
 
-        # Final summary
-        conclusion = await agent.send(
-            "Now that I've completed the sequential thinking process, please provide a final summary of the solution."
-        )
-        print(f"Conclusion:\n{conclusion}")
+                # Send the next prompt
+                response = await sequential_agent.send(
+                    "Continue the sequential thinking process based on your previous thoughts."
+                )
+                print(f"\nStep {sequential_agent.state['thought_number']}:\n{response}\n")
+
+            # Final summary
+            print("\n=== Final Summary ===")
+            conclusion = await sequential_agent.send(
+                "Now that you've completed the sequential thinking process, please provide a final summary of the solution."
+            )
+            print(f"{conclusion}\n")
+
+        finally:
+            # Clean up resources
+            await sequential_agent.shutdown()
 
 
 if __name__ == "__main__":
+    # Fix asyncio.run issue by ensuring main returns a coroutine
     asyncio.run(main())

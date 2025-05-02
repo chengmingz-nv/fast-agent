@@ -15,6 +15,7 @@ class AgentType(Enum):
     """Enumeration of supported agent types."""
 
     BASIC = "agent"
+    SEQUENTIAL_THINKING = "sequential_thinking"
     ORCHESTRATOR = "orchestrator"
     PARALLEL = "parallel"
     EVALUATOR_OPTIMIZER = "evaluator_optimizer"
@@ -33,6 +34,7 @@ class AgentConfig(BaseModel):
     default_request_params: RequestParams | None = None
     human_input: bool = False
     agent_type: AgentType = AgentType.BASIC
+    max_thoughts: int = 10
 
     @model_validator(mode="after")
     def ensure_default_request_params(self) -> "AgentConfig":

@@ -41,6 +41,12 @@ class DecoratedAgentProtocol(Protocol[P, R]):
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> Union[Awaitable[R], R]: ...
 
 
+class DecoratedSequentialThinkingProtocol(DecoratedAgentProtocol[P, R], Protocol):
+    """Protocol for decorated sequential thinking functions with additional metadata."""
+
+    _max_thoughts: int
+
+
 # Protocol for orchestrator functions
 class DecoratedOrchestratorProtocol(DecoratedAgentProtocol[P, R], Protocol):
     """Protocol for decorated orchestrator functions with additional metadata."""
@@ -203,6 +209,40 @@ def agent(
         use_history=use_history,
         request_params=request_params,
         human_input=human_input,
+    )
+
+
+DEFAULT_INSTRUCTION_SEQUENTIAL_THINKING = """
+You are a helpful AI Agent that uses sequential thinking to solve problems.
+"""
+
+
+def sequential_thinking(
+    self,
+    name: str = "sequential_thinking",
+    instruction: str = DEFAULT_INSTRUCTION_SEQUENTIAL_THINKING,
+    servers: List[str] = [],
+    model: Optional[str] = None,
+    max_thoughts: int = 10,
+    use_history: bool = True,
+    request_params: RequestParams | None = None,
+    human_input: bool = False,
+) -> Callable[[AgentCallable[P, R]], DecoratedSequentialThinkingProtocol[P, R]]:
+    final_instruction = instruction if instruction is not None else instruction
+    return cast(
+        "Callable[[AgentCallable[P, R]], DecoratedSequentialThinkingProtocol[P, R]]",
+        _decorator_impl(
+            self,
+            AgentType.SEQUENTIAL_THINKING,
+            name=name,
+            instruction=final_instruction,
+            servers=servers,
+            model=model,
+            max_thoughts=max_thoughts,
+            use_history=use_history,
+            request_params=request_params,
+            human_input=human_input,
+        ),
     )
 
 

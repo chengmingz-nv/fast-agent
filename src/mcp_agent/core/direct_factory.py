@@ -6,6 +6,7 @@ Implements type-safe factories with improved error handling.
 from typing import Any, Callable, Dict, Optional, Protocol, TypeVar
 
 from mcp_agent.agents.agent import Agent, AgentConfig
+from mcp_agent.agents.sequential_thinking_agent import SequentialThinkingAgent
 from mcp_agent.agents.workflow.evaluator_optimizer import (
     EvaluatorOptimizerAgent,
     QualityRating,
@@ -143,6 +144,19 @@ async def create_agents_by_type(
             if agent_type == AgentType.BASIC:
                 # Create a basic agent
                 agent = Agent(
+                    config=config,
+                    context=app_instance.context,
+                )
+                await agent.initialize()
+
+                # Attach LLM to the agent
+                llm_factory = model_factory_func(model=config.model)
+                await agent.attach_llm(llm_factory, request_params=config.default_request_params)
+                result_agents[name] = agent
+
+            elif agent_type == AgentType.SEQUENTIAL_THINKING:
+                # Create a sequential thinking agent
+                agent = SequentialThinkingAgent(
                     config=config,
                     context=app_instance.context,
                 )
@@ -355,6 +369,20 @@ async def create_agents_in_dependency_order(
                 model_factory_func,
             )
             active_agents.update(basic_agents)
+
+        if AgentType.SEQUENTIAL_THINKING.value in [agents_dict[name]["type"] for name in group]:
+            seq_agents = await create_agents_by_type(
+                app_instance,
+                {
+                    name: agents_dict[name]
+                    for name in group
+                    if agents_dict[name]["type"] == AgentType.SEQUENTIAL_THINKING.value
+                },
+                AgentType.SEQUENTIAL_THINKING,
+                active_agents,
+                model_factory_func,
+            )
+            active_agents.update(seq_agents)
 
         # Create parallel agents
         if AgentType.PARALLEL.value in [agents_dict[name]["type"] for name in group]:

@@ -20,6 +20,7 @@ from mcp_agent.context import Context
 from mcp_agent.core.agent_app import AgentApp
 from mcp_agent.core.direct_decorators import (
     agent as agent_decorator,
+    sequential_thinking as sequential_thinking_decorator,
 )
 from mcp_agent.core.direct_decorators import (
     chain as chain_decorator,
@@ -204,6 +205,7 @@ class FastAgent:
 
     # Decorator methods with type-safe implementations
     agent = agent_decorator
+    sequential_thinking = sequential_thinking_decorator
     orchestrator = orchestrator_decorator
     router = router_decorator
     chain = chain_decorator
