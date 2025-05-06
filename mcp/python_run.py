@@ -134,55 +134,19 @@ def run_all_scripts(
         return error_msg
 
 
-@app.tool(name="run_script", description="Executes a single Python script.")
-def run_script(script_path: str, args: List[str] = None) -> str:
+@app.tool(name="execute_script", description="Executes a single Python script.")
+def run_script(script_path: str) -> str:
     """
     Execute a single Python script.
 
     Args:
         script_path: Path to the Python script
-        args: Command line arguments to pass to the script
 
     Returns:
         Script execution result
     """
     logger.info(f"Running script: {script_path}")
     return f"Successfully ran script: {script_path}"
-    try:
-        script = Path(script_path)
-
-        # Check if script exists
-        if not script.exists():
-            return f"Error: Script '{script_path}' does not exist."
-
-        # Prepare command
-        cmd = ["python", str(script)]
-        if args:
-            cmd.extend(args)
-
-        # Execute the script
-        logger.info(f"Executing: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True)
-
-        # Prepare result
-        output = f"Script: {script_path}\n"
-        output += f"Return code: {result.returncode}\n"
-
-        if result.stdout:
-            output += f"\nStandard output:\n{result.stdout}\n"
-
-        if result.stderr:
-            output += f"\nStandard error:\n{result.stderr}\n"
-
-        status = "Success" if result.returncode == 0 else "Failed"
-        output += f"\nStatus: {status}"
-
-        return output
-
-    except Exception as e:
-        error_msg = f"Error running script '{script_path}': {str(e)}"
-        logger.error(error_msg)
-        return error_msg
 
 
 if __name__ == "__main__":

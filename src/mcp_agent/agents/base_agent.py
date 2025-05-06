@@ -47,7 +47,9 @@ from mcp_agent.logging.logger import get_logger
 from mcp_agent.mcp.interfaces import AgentProtocol, AugmentedLLMProtocol
 from mcp_agent.mcp.mcp_aggregator import MCPAggregator
 from mcp_agent.mcp.prompt_message_multipart import PromptMessageMultipart
+import logging
 
+logger = logging.getLogger(__name__)
 # Define a TypeVar for models
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
@@ -78,6 +80,7 @@ class BaseAgent(MCPAggregator, AgentProtocol):
         functions: Optional[List[Callable]] = None,
         connection_persistence: bool = True,
         human_input_callback: Optional[HumanInputCallback] = None,
+        max_thoughts: int = 10,
         context: Optional["Context"] = None,
         **kwargs: Dict[str, Any],
     ) -> None:
@@ -113,6 +116,23 @@ class BaseAgent(MCPAggregator, AgentProtocol):
             self.human_input_callback: Optional[HumanInputCallback] = human_input_callback
             if not human_input_callback and context and hasattr(context, "human_input_handler"):
                 self.human_input_callback = context.human_input_handler
+
+        self.state = {}
+        self._max_thoughts = max_thoughts
+        self._reset_state()
+
+    def _reset_state(self) -> Dict[str, Any]:
+        """Reset the sequential thinking state to initial values."""
+        return {
+            "thought_number": 1,
+            "total_thoughts": 5,  # Initial estimate
+            "next_thought_needed": True,
+            "branch_from_thought": None,
+            "branch_id": None,
+            "is_revision": False,
+            "revises_thought": None,
+            "needs_more_thoughts": False,
+        }
 
     async def initialize(self) -> None:
         """
@@ -204,6 +224,73 @@ class BaseAgent(MCPAggregator, AgentProtocol):
         return result.first_text()
 
     async def send(self, message: Union[str, PromptMessage, PromptMessageMultipart]) -> str:
+        """
+        Send a message to the agent and get a response.
+
+        Args:
+            message: Message content in various formats:
+                - String: Converted to a user PromptMessageMultipart
+                - PromptMessage: Converted to PromptMessageMultipart
+                - PromptMessageMultipart: Used directly
+
+        Returns:
+            The agent's response as a string
+        """
+        # Check if this is a new conversation by safely accessing message history
+        prompt = self._normalize_message_input(message)
+
+        # Use the LLM to generate a response
+        response = await self.generate([prompt], None)
+        return response.all_text()
+
+        is_new_conversation = True
+
+        # Use message_history property from BaseAgent which is safer than accessing _llm._history directly
+        try:
+            # If there's only the system message or no messages, it's a new conversation
+            if self._llm is not None:
+                history = self.message_history
+                is_new_conversation = len(history) <= 1
+        except (AttributeError, TypeError):
+            # If we can't access history, assume it's a new conversation
+            is_new_conversation = True
+
+        if is_new_conversation:
+            # Reset state for new conversations
+            self.state = self._reset_state()
+
+        # Only enhance string messages
+        if isinstance(message, str):
+            # Enhance the message with sequential thinking state information
+            enhanced_message = self._enhance_message_with_state(message)
+            # Send the enhanced message
+            response = await self._send_internal(enhanced_message)
+            self._update_state_from_response(response)
+        else:
+            # Send the original message for non-string message types
+            response = await self._send_internal(message)
+
+        # Continue the sequential thinking process until complete
+        while self.state["next_thought_needed"]:
+            # Send the next prompt
+            enhanced_message = self._enhance_message_with_state(
+                "Continue the sequential thinking process based on your previous thoughts."
+            )
+            response = await self._send_internal(enhanced_message)
+            self._update_state_from_response(response)
+            print(f"\nStep {self.state['thought_number']}:\n{response}\n")
+        if self.state["thought_number"] > 1:
+            # Final summary
+            print("\n=== Final Summary ===")
+            conclusion = await self._send_internal(
+                "Now that you've completed the sequential thinking process, please provide a final summary of the solution."
+            )
+            self._update_state_from_response(conclusion)
+            print(f"{conclusion}\n")
+
+    async def _send_internal(
+        self, message: Union[str, PromptMessage, PromptMessageMultipart]
+    ) -> str:
         """
         Send a message to the agent and get a response.
 
@@ -521,6 +608,118 @@ class BaseAgent(MCPAggregator, AgentProtocol):
             embedded_resources.append(embedded_resource)
 
         return embedded_resources
+
+    def _enhance_message_with_state(self, message: str) -> str:
+        """
+        Enhance a message with sequential thinking state information.
+
+        Args:
+            message: The original message
+
+        Returns:
+            The enhanced message with state information
+        """
+        # Don't add state information for very short messages that are likely
+        # just acknowledgments or follow-ups
+        if len(message.strip()) < 10:
+            return message
+
+        # Format the state parameters for the message
+        params = [
+            f"thoughtNumber: {self.state['thought_number']}",
+            f"totalThoughts: {self.state['total_thoughts']}",
+            f"nextThoughtNeeded: {str(self.state['next_thought_needed']).lower()}",
+        ]
+
+        # Add optional parameters if they're set
+        if self.state["is_revision"]:
+            params.append(f"isRevision: true")
+            params.append(f"revisesThought: {self.state['revises_thought']}")
+
+        if self.state["branch_from_thought"] is not None:
+            params.append(f"branchFromThought: {self.state['branch_from_thought']}")
+            if self.state["branch_id"]:
+                params.append(f'branchId: "{self.state["branch_id"]}"')
+
+        if self.state["needs_more_thoughts"]:
+            params.append("needsMoreThoughts: true")
+
+        # Join parameters with commas
+        params_str = ", ".join(params)
+
+        # Add the state information to the message
+        return f"""{message}
+
+When using the sequential_thinking tool, please use these parameters:
+{params_str}
+
+Continue your reasoning from where you left off, showing your step-by-step thinking.
+"""
+
+    def _update_state_from_response(self, response: str) -> None:
+        """
+        Update the sequential thinking state based on the response.
+
+        Args:
+            response: The agent's response
+        """
+        # Check for tool call results in the response
+        import re
+        import json
+
+        # Look for results from mcp_sequential-thinking tool calls
+        pattern = r"Tool: (?:mcp_sequential-thinking_sequentialthinking|sequentialthinking), Result: (\{.*?\})"
+        match = re.search(pattern, response, re.DOTALL)
+
+        if match:
+            try:
+                # Parse the tool result
+                result_str = match.group(1).strip()
+                result = json.loads(result_str)
+
+                # Update state with values from the tool result
+                if "thoughtNumber" in result:
+                    self.state["thought_number"] = result["thoughtNumber"]
+                else:
+                    # If thoughtNumber is missing, increment
+                    self.state["thought_number"] += 1
+
+                if "totalThoughts" in result:
+                    self.state["total_thoughts"] = result["totalThoughts"]
+
+                if "nextThoughtNeeded" in result:
+                    self.state["next_thought_needed"] = result["nextThoughtNeeded"]
+
+                # Update optional parameters if present
+                if "isRevision" in result:
+                    self.state["is_revision"] = result["isRevision"]
+
+                if "revisesThought" in result:
+                    self.state["revises_thought"] = result["revisesThought"]
+
+                if "branchFromThought" in result:
+                    self.state["branch_from_thought"] = result["branchFromThought"]
+
+                if "branchId" in result:
+                    self.state["branch_id"] = result["branchId"]
+
+                if "needsMoreThoughts" in result:
+                    self.state["needs_more_thoughts"] = result["needsMoreThoughts"]
+
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse sequential thinking tool result as JSON")
+            except Exception as e:
+                logger.warning(f"Error updating sequential thinking state: {str(e)}")
+        else:
+            # No tool result found - increment thought number as fallback
+            self.state["thought_number"] += 1
+
+            # If we've reached max_thoughts, set next_thought_needed to False
+            if (
+                self.state["thought_number"] >= self.state["total_thoughts"]
+                or self.state["thought_number"] >= self._max_thoughts
+            ):
+                self.state["next_thought_needed"] = False
 
     async def with_resource(
         self,

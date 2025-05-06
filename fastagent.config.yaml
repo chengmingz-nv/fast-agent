@@ -10,7 +10,7 @@
 # If not specified, defaults to "haiku".
 # Can be overriden with a command line switch --model=<model>, or within the Agent constructor.
 
-#default_model: nvdev/meta/llama-3.3-70b-instruct
+# default_model: nvdev/meta/llama-3.3-70b-instruct
 default_model: nvdev/meta/llama-3.1-70b-instruct
 # default_model: nvdev/nvidia/llama-3.1-nemotron-ultra-253b-v1
 
@@ -39,6 +39,9 @@ mcp:
     filesystem:
       command: "npx"
       args: ["-y", "@modelcontextprotocol/server-filesystem", "output"]
+    fileio:
+      command: "python"
+      args: ["mcp/fileio.py"]
     # In fastagent.config.yaml under mcp.servers
     nv_gitlab:
       command: "python"

@@ -6,7 +6,6 @@ Implements type-safe factories with improved error handling.
 from typing import Any, Callable, Dict, Optional, Protocol, TypeVar
 
 from mcp_agent.agents.agent import Agent, AgentConfig
-from mcp_agent.agents.sequential_thinking_agent import SequentialThinkingAgent
 from mcp_agent.agents.workflow.evaluator_optimizer import (
     EvaluatorOptimizerAgent,
     QualityRating,

@@ -227,9 +227,7 @@ class RouterAgent(BaseAgent):
         for agent in self.agents:
             agent_card: AgentCard = await agent.agent_card()
             agent_descriptions.append(
-                agent_card.model_dump_json(
-                    include={"name", "description", "skills"}, exclude_none=True
-                )
+                agent_card.model_dump_json(include={"name", "description"}, exclude_none=True)
             )
 
         context = ",\n".join(agent_descriptions)

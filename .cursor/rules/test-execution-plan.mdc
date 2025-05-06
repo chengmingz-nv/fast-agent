@@ -1,0 +1,21 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Drive-LLM Release Test Suite:
+1 test_vlm_benchmark.py
+2 test_vlm_accuracy.py
+3 test_vlm_chat.py
+
+Host for Deployment:
+Host: 10.191.151.221
+GPU: thor
+
+Available Agents:
+deploy agent
+test agent
+report agent
+
+
+based on above information, convert the input test plan into a series of instruction which can be handled by agents.

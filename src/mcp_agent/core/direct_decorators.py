@@ -133,6 +133,7 @@ def _decorator_impl(
         # Create agent configuration
         config = AgentConfig(
             name=name,
+            agent_type=agent_type,
             instruction=instruction,
             servers=servers,
             model=model,
@@ -229,7 +230,7 @@ def sequential_thinking(
     human_input: bool = False,
 ) -> Callable[[AgentCallable[P, R]], DecoratedSequentialThinkingProtocol[P, R]]:
     final_instruction = instruction if instruction is not None else instruction
-    return cast(
+    _seq = cast(
         "Callable[[AgentCallable[P, R]], DecoratedSequentialThinkingProtocol[P, R]]",
         _decorator_impl(
             self,
@@ -244,6 +245,7 @@ def sequential_thinking(
             human_input=human_input,
         ),
     )
+    return _seq
 
 
 DEFAULT_INSTRUCTION_ORCHESTRATOR = """
